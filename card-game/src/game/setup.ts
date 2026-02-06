@@ -63,6 +63,7 @@ export function createInitialGameState(playerNames?: string[]): GameState {
       id: i,
       name,
       grid,
+      initialFlipsRemaining: 3,
     });
   }
 
@@ -73,7 +74,7 @@ export function createInitialGameState(playerNames?: string[]): GameState {
     discardPile: [],
     currentPlayerId: 0,
     turn: 1,
-    phase: 'PLAYING', // you can change this to 'SETUP' later if needed
+    phase: 'SETUP', 
     winnerId: null,
   };
 

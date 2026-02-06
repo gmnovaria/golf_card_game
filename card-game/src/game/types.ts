@@ -56,6 +56,7 @@ export interface Player {
   id: PlayerId;
   name: string;
   grid: PlayerGrid;
+  initialFlipsRemaining: number;
 }
 
 // ---- Game State ----

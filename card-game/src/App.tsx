@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import type { GameState, GridSlot } from './game/types';
 import { createInitialGameState } from './game/setup';
+import { flipGridCard } from './game/actions';
 
 // Seating positions (indices into game.players)
 const SOUTH_INDEX = 0; // Gage
@@ -18,7 +19,11 @@ const INITIAL_STATE: GameState = createInitialGameState([
 ]);
 
 function App() {
-  const [game] = useState<GameState>(INITIAL_STATE);
+  const [game, setGame] = useState<GameState>(INITIAL_STATE);
+
+  function handleGridClick(playerId: number, row: number, col: number) {
+  setGame((prev) => flipGridCard(prev, playerId, row, col));
+}
 
   const southPlayer = game.players[SOUTH_INDEX];
   const westPlayer = game.players[WEST_INDEX];
@@ -59,7 +64,11 @@ function App() {
           <PlayerPanel
             playerName={northPlayer.name}
             grid={northPlayer.grid}
-            rotation={180}
+            rotation={0}
+            isCurrent={northPlayer.id === game.currentPlayerId}
+            onCellClick={(row, col) =>
+              handleGridClick(northPlayer.id, row, col)
+            }
           />
         </div>
 
@@ -68,7 +77,11 @@ function App() {
           <PlayerPanel
             playerName={westPlayer.name}
             grid={westPlayer.grid}
-            rotation={90}
+            rotation={0}
+            isCurrent={westPlayer.id === game.currentPlayerId}
+            onCellClick={(row, col) =>
+              handleGridClick(westPlayer.id, row, col)
+            }
           />
         </div>
 
@@ -85,7 +98,11 @@ function App() {
           <PlayerPanel
             playerName={eastPlayer.name}
             grid={eastPlayer.grid}
-            rotation={270}
+            rotation={0}
+            isCurrent={eastPlayer.id === game.currentPlayerId}
+            onCellClick={(row, col) =>
+              handleGridClick(eastPlayer.id, row, col)
+            }
           />
         </div>
 
@@ -95,6 +112,10 @@ function App() {
             playerName={southPlayer.name}
             grid={southPlayer.grid}
             rotation={0}
+            isCurrent={southPlayer.id === game.currentPlayerId}
+            onCellClick={(row, col) =>
+              handleGridClick(southPlayer.id, row, col)
+            }
           />
         </div>
       </div>
@@ -107,20 +128,23 @@ interface PlayerPanelProps {
   playerName: string;
   grid: (GridSlot | null)[][];
   rotation: number; // degrees
+  isCurrent: boolean;
+  onCellClick?: (row: number, col: number) => void;
 }
 
-function PlayerPanel({ playerName, grid, rotation }: PlayerPanelProps) {
+function PlayerPanel({ playerName, grid, rotation, isCurrent, onCellClick }: PlayerPanelProps) {
   return (
     <div
       style={{
         display: 'inline-block',
         transform: `rotate(${rotation}deg)`,
         transformOrigin: 'center center',
+        opacity: isCurrent ? 1 : 0.75,
       }}
     >
       <div
         style={{
-          border: '1px solid #4a5568',
+          border: isCurrent ? '2px solid #f6e05e' : '1px solid #4a5568',
           borderRadius: '8px',
           padding: '0.75rem 1rem',
           backgroundColor: '#2d3748',
@@ -128,8 +152,9 @@ function PlayerPanel({ playerName, grid, rotation }: PlayerPanelProps) {
       >
         <div style={{ marginBottom: '0.5rem', fontWeight: 600 }}>
           {playerName}
+          {isCurrent && ' (Your Turn)'}
         </div>
-        <GridView grid={grid} />
+        <GridView grid={grid} onCellClick={onCellClick} />
       </div>
     </div>
   );
@@ -137,9 +162,10 @@ function PlayerPanel({ playerName, grid, rotation }: PlayerPanelProps) {
 
 interface GridViewProps {
   grid: (GridSlot | null)[][];
+  onCellClick?: (row: number, col: number) => void;
 }
 
-function GridView({ grid }: GridViewProps) {
+function GridView({ grid, onCellClick }: GridViewProps) {
   return (
     <div
       style={{
@@ -152,6 +178,13 @@ function GridView({ grid }: GridViewProps) {
       {grid.map((row, rowIndex) =>
         row.map((slot, colIndex) => {
           const key = `${rowIndex}-${colIndex}`;
+
+          const handleClick = () => {
+            if (onCellClick) {
+              onCellClick(rowIndex, colIndex);
+            }
+          };
+
           if (!slot) {
             return (
               <div
@@ -168,6 +201,7 @@ function GridView({ grid }: GridViewProps) {
           return (
             <div
               key={key}
+              onClick={handleClick}
               style={{
                 border: '1px solid #4a5568',
                 borderRadius: '4px',
@@ -177,6 +211,7 @@ function GridView({ grid }: GridViewProps) {
                 backgroundColor: '#2d3748',
                 color: 'white',
                 fontWeight: 'bold',
+                cursor: onCellClick ? 'pointer' : 'default'
               }}
             >
               {slot.faceUp ? slot.card.rank : 'Golf'}
