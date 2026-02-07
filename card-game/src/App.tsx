@@ -13,9 +13,9 @@ const EAST_INDEX = 3;  // Player 4
 
 const INITIAL_STATE: GameState = createInitialGameState([
   'Gage',      // South
-  'Player 2',  // West
-  'Player 3',  // North
-  'Player 4',  // East
+  'Arnold',  // West
+  'Jack',  // North
+  'Tiger',  // East
 ]);
 
 function App() {
@@ -51,16 +51,19 @@ function App() {
       <div
         style={{
           display: 'grid',
-          gridTemplateRows: 'auto auto auto',
+          gridTemplateRows: 'auto auto',
           gridTemplateColumns: 'auto auto auto',
           rowGap: '3rem',      // vertical spacing between rows
           columnGap: '3rem',   // horizontal spacing between columns
           justifyContent: 'center',
           alignItems: 'center',
+          marginTop: '1rem'
         }}
       >
         {/* North player (top center, rotated 180°) */}
-        <div style={{ gridRow: 1, gridColumn: 2, textAlign: 'center' }}>
+        <div style={{ 
+          gridRow: 1, gridColumn: 2, textAlign: 'center', marginBottom: '1rem' 
+          }}>
           <PlayerPanel
             playerName={northPlayer.name}
             grid={northPlayer.grid}
@@ -73,7 +76,9 @@ function App() {
         </div>
 
         {/* West player (middle left, rotated 90°) */}
-        <div style={{ gridRow: 2, gridColumn: 1, textAlign: 'center' }}>
+        <div style={{ 
+          gridRow: 1, gridColumn: 1, textAlign: 'center', transform: 'translateY(90px)' 
+          }}>
           <PlayerPanel
             playerName={westPlayer.name}
             grid={westPlayer.grid}
@@ -85,8 +90,8 @@ function App() {
           />
         </div>
 
-        {/* Center piles (middle center) */}
-        <div style={{ gridRow: 2, gridColumn: 2, textAlign: 'center' }}>
+        {/* Draw and Discard piles to the right of player's hand */}
+        <div style={{ gridRow: 2, gridColumn: 3, textAlign: 'center', transform: 'translateY(20px)' }}>
           <CenterPiles
             drawCount={game.drawPile.length}
             discardCount={game.discardPile.length}
@@ -94,7 +99,7 @@ function App() {
         </div>
 
         {/* East player (middle right, rotated 270°) */}
-        <div style={{ gridRow: 2, gridColumn: 3, textAlign: 'center' }}>
+        <div style={{ gridRow: 1, gridColumn: 3, textAlign: 'center', transform: 'translateY(90px)' }}>
           <PlayerPanel
             playerName={eastPlayer.name}
             grid={eastPlayer.grid}
@@ -107,7 +112,7 @@ function App() {
         </div>
 
         {/* South player (bottom center, upright) */}
-        <div style={{ gridRow: 3, gridColumn: 2, textAlign: 'center' }}>
+        <div style={{ gridRow: 2, gridColumn: 2, textAlign: 'center', }}>
           <PlayerPanel
             playerName={southPlayer.name}
             grid={southPlayer.grid}
@@ -116,6 +121,7 @@ function App() {
             onCellClick={(row, col) =>
               handleGridClick(southPlayer.id, row, col)
             }
+            size = "large"
           />
         </div>
       </div>
@@ -130,9 +136,10 @@ interface PlayerPanelProps {
   rotation: number; // degrees
   isCurrent: boolean;
   onCellClick?: (row: number, col: number) => void;
+  size?: 'normal' | 'large';
 }
 
-function PlayerPanel({ playerName, grid, rotation, isCurrent, onCellClick }: PlayerPanelProps) {
+function PlayerPanel({ playerName, grid, rotation, isCurrent, onCellClick, size }: PlayerPanelProps) {
   return (
     <div
       style={{
@@ -154,7 +161,7 @@ function PlayerPanel({ playerName, grid, rotation, isCurrent, onCellClick }: Pla
           {playerName}
           {isCurrent && ' (Your Turn)'}
         </div>
-        <GridView grid={grid} onCellClick={onCellClick} />
+        <GridView grid={grid} onCellClick={onCellClick} size={size}/>
       </div>
     </div>
   );
@@ -163,27 +170,30 @@ function PlayerPanel({ playerName, grid, rotation, isCurrent, onCellClick }: Pla
 interface GridViewProps {
   grid: (GridSlot | null)[][];
   onCellClick?: (row: number, col: number) => void;
+  size?: 'normal' | 'large';
 }
 
-function GridView({ grid, onCellClick }: GridViewProps) {
+function GridView({ grid, onCellClick, size = 'normal' }: GridViewProps) {
+  const isLarge = size === 'large';
+  const cardWidth = isLarge ? 80 : 45;
+  const cardHeight = isLarge ? 120 : 70;
+  const cardFontSize = isLarge ? '1.2rem' : '0.9rem';
+  
   return (
     <div
       style={{
         display: 'grid',
-        gridTemplateColumns: 'repeat(3, 40px)',
-        gridTemplateRows: 'repeat(3, 60px)',
-        gap: '4px',
+        gridTemplateColumns: `repeat(3, ${cardWidth}px)`,
+        gridTemplateRows: `repeat(3, ${cardHeight}px)`,
+        gap: isLarge ? '8px' : '4px',
       }}
     >
       {grid.map((row, rowIndex) =>
         row.map((slot, colIndex) => {
           const key = `${rowIndex}-${colIndex}`;
 
-          const handleClick = () => {
-            if (onCellClick) {
-              onCellClick(rowIndex, colIndex);
-            }
-          };
+          const handleClick = () => 
+            onCellClick?.(rowIndex, colIndex);
 
           if (!slot) {
             return (
@@ -204,20 +214,22 @@ function GridView({ grid, onCellClick }: GridViewProps) {
               onClick={handleClick}
               style={{
                 border: '1px solid #4a5568',
-                borderRadius: '4px',
+                borderRadius: '6px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 backgroundColor: '#2d3748',
                 color: 'white',
                 fontWeight: 'bold',
-                cursor: onCellClick ? 'pointer' : 'default'
+                fontSize: cardFontSize,
+                cursor: onCellClick ? 'pointer' : 'default',
+                userSelect: 'none',
               }}
             >
               {slot.faceUp ? slot.card.rank : 'Golf'}
             </div>
           );
-        }),
+        })
       )}
     </div>
   );
@@ -231,7 +243,7 @@ interface CenterPilesProps {
 function CenterPiles({ drawCount, discardCount }: CenterPilesProps) {
   return (
     <div style={{ textAlign: 'center' }}>
-      <div style={{ marginBottom: '0.75rem', fontWeight: 600 }}>Center</div>
+      <div style={{ marginBottom: '0.75rem', fontWeight: 600 }}></div>
       <div
         style={{
           display: 'flex',
@@ -244,8 +256,8 @@ function CenterPiles({ drawCount, discardCount }: CenterPilesProps) {
         <div style={{ textAlign: 'center' }}>
           <div
             style={{
-              width: 50,
-              height: 70,
+              width: 80,
+              height: 120,
               borderRadius: 6,
               border: '2px solid #e2e8f0',
               backgroundColor: '#4a5568',
@@ -256,9 +268,9 @@ function CenterPiles({ drawCount, discardCount }: CenterPilesProps) {
             }}
           >
             {/* face-down back of the deck */}
-            <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>DRAW</span>
+            <span style={{ fontSize: '1.1rem', fontWeight: 600 }}>DRAW</span>
           </div>
-          <div style={{ fontSize: '0.75rem' }}>
+          <div style={{ fontSize: '1.1rem' }}>
             Cards: <strong>{drawCount}</strong>
           </div>
         </div>
@@ -267,8 +279,8 @@ function CenterPiles({ drawCount, discardCount }: CenterPilesProps) {
         <div style={{ textAlign: 'center' }}>
           <div
             style={{
-              width: 50,
-              height: 70,
+              width: 80,
+              height: 120,
               borderRadius: 6,
               border: '2px dashed #e2e8f0',
               backgroundColor: discardCount > 0 ? '#742a2a' : 'transparent',
@@ -278,9 +290,9 @@ function CenterPiles({ drawCount, discardCount }: CenterPilesProps) {
               marginBottom: '0.25rem',
             }}
           >
-            <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>DISCARD</span>
+            <span style={{ fontSize: '1.1rem', fontWeight: 600 }}>DISCARD</span>
           </div>
-          <div style={{ fontSize: '0.75rem' }}>
+          <div style={{ fontSize: '1.1rem' }}>
             Cards: <strong>{discardCount}</strong>
           </div>
         </div>
