@@ -67,8 +67,25 @@ export function flipGridCard(
 
     if (allDone) {
       // Everyone done with setup -> start main play
+      let updatedDrawPile = newState.drawPile;
+      let updatedDiscardPile = newState.discardPile;
+
+    if (updatedDrawPile.length > 0){
+      const [topCard, ...rest] = updatedDrawPile;
+      updatedDrawPile = rest;
+      // put new card at the front of the discard pile
+      const flippedCard = {
+        ...topCard,
+        faceUp: true,
+      };
+
+      updatedDiscardPile = [flippedCard, ...updatedDiscardPile];
+    }
+
       newState = {
         ...newState,
+        drawPile: updatedDrawPile,
+        discardPile: updatedDiscardPile,
         phase: 'PLAYING',
         currentPlayerId: 0, // back to Gage
         turn: 1,

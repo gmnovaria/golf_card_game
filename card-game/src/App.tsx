@@ -1,7 +1,7 @@
 // src/App.tsx
 
 import { useState } from 'react';
-import type { GameState, GridSlot } from './game/types';
+import type { GameState, GridSlot, Card } from './game/types';
 import { createInitialGameState } from './game/setup';
 import { flipGridCard } from './game/actions';
 
@@ -95,6 +95,7 @@ function App() {
           <CenterPiles
             drawCount={game.drawPile.length}
             discardCount={game.discardPile.length}
+            topDiscardCard={game.discardPile[0] ?? null}
           />
         </div>
 
@@ -238,12 +239,25 @@ function GridView({ grid, onCellClick, size = 'normal' }: GridViewProps) {
 interface CenterPilesProps {
   drawCount: number;
   discardCount: number;
+  topDiscardCard: Card | null;
 }
 
-function CenterPiles({ drawCount, discardCount }: CenterPilesProps) {
+function CenterPiles({ drawCount, discardCount, topDiscardCard }: CenterPilesProps) {
+  const cardWidth = 80;
+  const cardHeight = 120;
+  const borderRadius = 6;
+  const fontSize = '1.1rem';
+
+  // If there's a card in the discard pile, show its rank
+  const discardLabel =
+    discardCount > 0 && topDiscardCard
+      ? topDiscardCard.rank
+      : 'DISCARD';
+
   return (
     <div style={{ textAlign: 'center' }}>
       <div style={{ marginBottom: '0.75rem', fontWeight: 600 }}></div>
+
       <div
         style={{
           display: 'flex',
@@ -256,9 +270,9 @@ function CenterPiles({ drawCount, discardCount }: CenterPilesProps) {
         <div style={{ textAlign: 'center' }}>
           <div
             style={{
-              width: 80,
-              height: 120,
-              borderRadius: 6,
+              width: cardWidth,
+              height: cardHeight,
+              borderRadius,
               border: '2px solid #e2e8f0',
               backgroundColor: '#4a5568',
               display: 'flex',
@@ -267,10 +281,9 @@ function CenterPiles({ drawCount, discardCount }: CenterPilesProps) {
               marginBottom: '0.25rem',
             }}
           >
-            {/* face-down back of the deck */}
-            <span style={{ fontSize: '1.1rem', fontWeight: 600 }}>DRAW</span>
+            <span style={{ fontSize, fontWeight: 600 }}>DRAW</span>
           </div>
-          <div style={{ fontSize: '1.1rem' }}>
+          <div style={{ fontSize }}>
             Cards: <strong>{drawCount}</strong>
           </div>
         </div>
@@ -279,20 +292,25 @@ function CenterPiles({ drawCount, discardCount }: CenterPilesProps) {
         <div style={{ textAlign: 'center' }}>
           <div
             style={{
-              width: 80,
-              height: 120,
-              borderRadius: 6,
+              width: cardWidth,
+              height: cardHeight,
+              borderRadius,
               border: '2px dashed #e2e8f0',
               backgroundColor: discardCount > 0 ? '#742a2a' : 'transparent',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               marginBottom: '0.25rem',
+              fontSize,
+              fontWeight: 700,
+              color: discardCount > 0 ? 'white' : '#e2e8f0',
+              userSelect: 'none',
             }}
           >
-            <span style={{ fontSize: '1.1rem', fontWeight: 600 }}>DISCARD</span>
+            {/* This now shows the card's rank */}
+            {discardLabel}
           </div>
-          <div style={{ fontSize: '1.1rem' }}>
+          <div style={{ fontSize }}>
             Cards: <strong>{discardCount}</strong>
           </div>
         </div>

@@ -5,14 +5,14 @@
 // Eight custom suits.
 // Placeholder names for now; rename later to whatever you want.
 export type Suit =
-  | 'Suit1'
-  | 'Suit2'
-  | 'Suit3'
-  | 'Suit4'
-  | 'Suit5'
-  | 'Suit6'
-  | 'Suit7'
-  | 'Suit8';
+  | 'hearts'
+  | 'diamonds'
+  | 'clubs'
+  | 'spades'
+  | 'stars'
+  | 'moons'
+  | 'triangles'
+  | 'shields';
 
 // Standard ranks A–K. Jokers exist separately.
 export type Rank =
@@ -86,15 +86,15 @@ export const SUIT_COUNT = 8;
 export const RANKS_PER_SUIT = 13;
 export const TOTAL_JOKERS = 4;
 
-export const SUITS: Suit[] = [
-  'Suit1',
-  'Suit2',
-  'Suit3',
-  'Suit4',
-  'Suit5',
-  'Suit6',
-  'Suit7',
-  'Suit8',
+export const SUITS: { id: Suit; symbol: string}[] = [
+  { id: 'hearts', symbol: '♥' },
+  { id: 'diamonds', symbol: '♦' },
+  { id: 'clubs', symbol: '♣' },
+  { id: 'spades', symbol: '♠' },
+  { id: 'stars', symbol: '★' },
+  { id: 'moons', symbol: '☾' },
+  { id: 'triangles', symbol: '▲' },
+  { id: 'shields', symbol: '🛡' },
 ];
 
 export const RANKS: Rank[] = [
