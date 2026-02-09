@@ -1,9 +1,10 @@
 // src/App.tsx
 
 import { useState } from 'react';
-import type { GameState, GridSlot, Card } from './game/types';
+import type { GameState, GridSlot, Card, Suit } from './game/types';
 import { createInitialGameState } from './game/setup';
 import { flipGridCard } from './game/actions';
+import {SUITS} from './game/types';
 
 // Seating positions (indices into game.players)
 const SOUTH_INDEX = 0; // Gage
@@ -17,6 +18,46 @@ const INITIAL_STATE: GameState = createInitialGameState([
   'Jack',  // North
   'Tiger',  // East
 ]);
+
+const suitSymbolMap: Record<Suit, string> = SUITS.reduce(
+  (acc, suit) => {
+    acc[suit.id] = suit.symbol;
+    return acc;
+  },
+  {} as Record<Suit, string>
+)
+
+const suitColorMap: Record<Suit, string> = {
+  hearts: '#ff4d4d',      // red
+  diamonds: '#ff4d4d',    // red
+  clubs: '#000000',       // black
+  spades: '#000000',      // black
+  hearts2: '#ff4d4d',     // red
+  diamonds2: '#ff4d4d',   // red
+  clubs2: '#000000',       // black
+  spades2: '#000000',       // black
+};
+
+const cardBackPatternStyle = {
+  backgroundColor: '#044718',
+  backgroundImage: `
+    repeating-linear-gradient(
+      45deg,
+      rgba(255,255,255,0.12) 0,
+      rgba(255,255,255,0.12) 2px,
+      transparent 2px,
+      transparent 10px
+    ),
+    repeating-linear-gradient(
+      -45deg,
+      rgba(255,255,255,0.12) 0,
+      rgba(255,255,255,0.12) 2px,
+      transparent 2px,
+      transparent 10px
+    )
+  `,
+  backgroundSize: '100% 100%'
+};
 
 function App() {
   const [game, setGame] = useState<GameState>(INITIAL_STATE);
@@ -34,7 +75,7 @@ function App() {
     <div
       style={{
         minHeight: '100vh',
-        backgroundColor: '#1a202c',
+        backgroundColor: '#00290c',
         color: 'white',
         padding: '1rem',
         fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
@@ -90,15 +131,6 @@ function App() {
           />
         </div>
 
-        {/* Draw and Discard piles to the right of player's hand */}
-        <div style={{ gridRow: 2, gridColumn: 3, textAlign: 'center', transform: 'translateY(20px)' }}>
-          <CenterPiles
-            drawCount={game.drawPile.length}
-            discardCount={game.discardPile.length}
-            topDiscardCard={game.discardPile[0] ?? null}
-          />
-        </div>
-
         {/* East player (middle right, rotated 270°) */}
         <div style={{ gridRow: 1, gridColumn: 3, textAlign: 'center', transform: 'translateY(90px)' }}>
           <PlayerPanel
@@ -125,6 +157,16 @@ function App() {
             size = "large"
           />
         </div>
+
+        {/* Draw and Discard piles to the right of player's hand */}
+        <div style={{ gridRow: 2, gridColumn: 3, textAlign: 'center', transform: 'translateY(20px)' }}>
+          <CenterPiles
+            drawCount={game.drawPile.length}
+            discardCount={game.discardPile.length}
+            topDiscardCard={game.discardPile[0] ?? null}
+          />
+        </div>
+
       </div>
 
     </div>
@@ -140,7 +182,14 @@ interface PlayerPanelProps {
   size?: 'normal' | 'large';
 }
 
-function PlayerPanel({ playerName, grid, rotation, isCurrent, onCellClick, size }: PlayerPanelProps) {
+function PlayerPanel({ 
+  playerName, 
+  grid, 
+  rotation, 
+  isCurrent, 
+  onCellClick, 
+  size,
+}: PlayerPanelProps) {
   return (
     <div
       style={{
@@ -178,7 +227,8 @@ function GridView({ grid, onCellClick, size = 'normal' }: GridViewProps) {
   const isLarge = size === 'large';
   const cardWidth = isLarge ? 80 : 45;
   const cardHeight = isLarge ? 120 : 70;
-  const cardFontSize = isLarge ? '1.2rem' : '0.9rem';
+  const centerFontSize = isLarge ? '2.7rem' : '1.5rem';
+  const cornerFontSize = isLarge ? '1.5rem' : '0.9rem';
   
   return (
     <div
@@ -193,8 +243,11 @@ function GridView({ grid, onCellClick, size = 'normal' }: GridViewProps) {
         row.map((slot, colIndex) => {
           const key = `${rowIndex}-${colIndex}`;
 
-          const handleClick = () => 
-            onCellClick?.(rowIndex, colIndex);
+          const handleClick = () => {
+            if (onCellClick) {
+              onCellClick(rowIndex, colIndex);
+            }
+          };
 
           if (!slot) {
             return (
@@ -202,32 +255,138 @@ function GridView({ grid, onCellClick, size = 'normal' }: GridViewProps) {
                 key={key}
                 style={{
                   border: '1px solid #4a5568',
-                  borderRadius: '4px',
+                  borderRadius: '6',
                   backgroundColor: '#1a202c',
+                  width: cardWidth,
+                  height: cardHeight,
                 }}
               />
             );
           }
 
+ const { card, faceUp } = slot;
+          const isJoker = card.rank === 'Joker';
+          const hasSuit = !!card.suit;
+          const suitSymbol =
+            hasSuit && card.suit ? suitSymbolMap[card.suit as Suit] : '';
+
+          if (faceUp) {
+  console.log('Face-up card:', card);
+}
+  
+          // Face-down card
+          if (!faceUp) {
+            return (
+              <div
+                key={key}
+                onClick={handleClick}
+                style={{
+                  border: '1px solid #044718',
+                  borderRadius: 6,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: cardWidth,
+                  height: cardHeight,
+                  cursor: onCellClick ? 'pointer' : 'default',
+                  userSelect: 'none',
+                  ...cardBackPatternStyle,
+                }}
+              >
+                <span
+                  style={{
+                    fontSize: isLarge? '2.7rem' : '1.5rem',
+                    opacity: 0.9,
+                  }}
+                  >
+                    ⛳
+                  </span>
+              </div>
+            );
+          }
+
+          // Face-up card: rank in center, suit in 4 corners (if not Joker)
           return (
             <div
               key={key}
               onClick={handleClick}
               style={{
-                border: '1px solid #4a5568',
-                borderRadius: '6px',
+                position: 'relative',
+                border: `2px solid ${hasSuit ? suitColorMap[card.suit as Suit] : '#ccc'}`,
+                borderRadius: 6,
+                width: cardWidth,
+                height: cardHeight,
+                backgroundColor: 'white',
+                color: hasSuit ? suitColorMap[card.suit as Suit] : '#000',
+                cursor: onCellClick ? 'pointer' : 'default',
+                userSelect: 'none',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                backgroundColor: '#2d3748',
-                color: 'white',
                 fontWeight: 'bold',
-                fontSize: cardFontSize,
-                cursor: onCellClick ? 'pointer' : 'default',
-                userSelect: 'none',
               }}
             >
-              {slot.faceUp ? slot.card.rank : 'Golf'}
+              {/* Center rank text */}
+              <span style={{ fontSize: centerFontSize}}>
+                {isJoker ? '🤡' : card.rank}
+              </span>
+
+              {/* Suit symbols in corners (skip if Joker or no suit) */}
+              {hasSuit && !isJoker && (
+                <>
+                  {/* Top-left */}
+                  <span
+                    style={{
+                      position: 'absolute',
+                      top: 4,
+                      left: 6,
+                      fontSize: cornerFontSize,
+                      color: suitColorMap[card.suit as Suit],
+                    }}
+                  >
+                    {suitSymbol}
+                  </span>
+
+                  {/* Top-right */}
+                  <span
+                    style={{
+                      position: 'absolute',
+                      top: 4,
+                      right: 6,
+                      fontSize: cornerFontSize,
+                      color: suitColorMap[card.suit as Suit],
+                    }}
+                  >
+                    {suitSymbol}
+                  </span>
+
+                  {/* Bottom-left */}
+                  <span
+                    style={{
+                      position: 'absolute',
+                      bottom: 4,
+                      left: 6,
+                      fontSize: cornerFontSize,
+                      color: suitColorMap[card.suit as Suit],
+                    }}
+                  >
+                    {suitSymbol}
+                  </span>
+
+                  {/* Bottom-right */}
+                  <span
+                    style={{
+                      position: 'absolute',
+                      bottom: 4,
+                      right: 6,
+                      fontSize: cornerFontSize,
+                      color: suitColorMap[card.suit as Suit],
+                    }}
+                  >
+                    {suitSymbol}
+                  </span>
+                </>
+              )}
             </div>
           );
         })
@@ -242,17 +401,31 @@ interface CenterPilesProps {
   topDiscardCard: Card | null;
 }
 
-function CenterPiles({ drawCount, discardCount, topDiscardCard }: CenterPilesProps) {
+/**
+ * CenterPiles:
+ * - Draw pile: face-down card
+ * - Discard pile:
+ *    - empty -> placeholder "DISCARD"
+ *    - non-empty -> top card with rank in center + suit symbol in 4 corners
+ */
+function CenterPiles({
+  drawCount,
+  discardCount,
+  topDiscardCard,
+}: CenterPilesProps) {
   const cardWidth = 80;
   const cardHeight = 120;
   const borderRadius = 6;
-  const fontSize = '1.1rem';
+  const centerFontSize = '2.7rem';
+  const cornerFontSize = '1.5rem';
 
-  // If there's a card in the discard pile, show its rank
-  const discardLabel =
-    discardCount > 0 && topDiscardCard
-      ? topDiscardCard.rank
-      : 'DISCARD';
+  const hasTopDiscard = discardCount > 0 && !!topDiscardCard;
+  const isJoker = hasTopDiscard && topDiscardCard!.rank === 'Joker';
+  const hasSuit = hasTopDiscard && !!topDiscardCard!.suit;
+  const suitSymbol =
+    hasSuit && topDiscardCard!.suit
+      ? suitSymbolMap[topDiscardCard!.suit as Suit]
+      : '';
 
   return (
     <div style={{ textAlign: 'center' }}>
@@ -273,17 +446,25 @@ function CenterPiles({ drawCount, discardCount, topDiscardCard }: CenterPilesPro
               width: cardWidth,
               height: cardHeight,
               borderRadius,
-              border: '2px solid #e2e8f0',
-              backgroundColor: '#4a5568',
+              border: '2px solid #044718',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               marginBottom: '0.25rem',
+              userSelect: 'none',
+              ...cardBackPatternStyle,
             }}
           >
-            <span style={{ fontSize, fontWeight: 600 }}>DRAW</span>
+            <span
+              style={{
+                fontSize: centerFontSize,
+                fontWeight: 600,
+              }}
+            >
+              ⛳
+            </span>
           </div>
-          <div style={{ fontSize }}>
+          <div style={{ fontSize: '0.9rem' }}>
             Cards: <strong>{drawCount}</strong>
           </div>
         </div>
@@ -292,25 +473,103 @@ function CenterPiles({ drawCount, discardCount, topDiscardCard }: CenterPilesPro
         <div style={{ textAlign: 'center' }}>
           <div
             style={{
+              position: 'relative',
               width: cardWidth,
               height: cardHeight,
               borderRadius,
               border: '2px dashed #e2e8f0',
-              backgroundColor: discardCount > 0 ? '#742a2a' : 'transparent',
+              backgroundColor: hasTopDiscard ? 'white' : 'transparent',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               marginBottom: '0.25rem',
-              fontSize,
-              fontWeight: 700,
-              color: discardCount > 0 ? 'white' : '#e2e8f0',
+              color: hasTopDiscard ? 'white' : '#e2e8f0',
               userSelect: 'none',
             }}
           >
-            {/* This now shows the card's rank */}
-            {discardLabel}
+            {hasTopDiscard ? (
+              <>
+                {/* Center rank text */}
+                <div
+                  style={{
+                    fontWeight: 'bold',
+                    fontSize: centerFontSize,
+                    textAlign: 'center',
+                    color: hasSuit ? suitColorMap[topDiscardCard!.suit as Suit] : '#000',
+                  }}
+                >
+                  {isJoker ? 'JOKER' : topDiscardCard!.rank}
+                </div>
+
+                {/* Suit symbols in corners (skip if Joker or no suit) */}
+                {hasSuit && !isJoker && (
+                  <>
+                    {/* Top-left */}
+                    <span
+                      style={{
+                        position: 'absolute',
+                        top: 4,
+                        left: 6,
+                        fontSize: cornerFontSize,
+                        color: suitColorMap[topDiscardCard!.suit as Suit],
+                      }}
+                    >
+                      {suitSymbol}
+                    </span>
+
+                    {/* Top-right */}
+                    <span
+                      style={{
+                        position: 'absolute',
+                        top: 4,
+                        right: 6,
+                        fontSize: cornerFontSize,
+                        color: suitColorMap[topDiscardCard!.suit as Suit],
+                      }}
+                    >
+                      {suitSymbol}
+                    </span>
+
+                    {/* Bottom-left */}
+                    <span
+                      style={{
+                        position: 'absolute',
+                        bottom: 4,
+                        left: 6,
+                        fontSize: cornerFontSize,
+                        color: suitColorMap[topDiscardCard!.suit as Suit],
+                      }}
+                    >
+                      {suitSymbol}
+                    </span>
+
+                    {/* Bottom-right */}
+                    <span
+                      style={{
+                        position: 'absolute',
+                        bottom: 4,
+                        right: 6,
+                        fontSize: cornerFontSize,
+                        color: suitColorMap[topDiscardCard!.suit as Suit],
+                      }}
+                    >
+                      {suitSymbol}
+                    </span>
+                  </>
+                )}
+              </>
+            ) : (
+              <span
+                style={{
+                  fontSize: centerFontSize,
+                  fontWeight: 600,
+                }}
+              >
+                DISCARD
+              </span>
+            )}
           </div>
-          <div style={{ fontSize }}>
+          <div style={{ fontSize: '0.9rem' }}>
             Cards: <strong>{discardCount}</strong>
           </div>
         </div>

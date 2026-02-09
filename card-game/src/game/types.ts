@@ -9,10 +9,10 @@ export type Suit =
   | 'diamonds'
   | 'clubs'
   | 'spades'
-  | 'stars'
-  | 'moons'
-  | 'triangles'
-  | 'shields';
+  | 'hearts2'
+  | 'diamonds2'
+  | 'clubs2'
+  | 'spades2';
 
 // Standard ranks A–K. Jokers exist separately.
 export type Rank =
@@ -91,10 +91,10 @@ export const SUITS: { id: Suit; symbol: string}[] = [
   { id: 'diamonds', symbol: '♦' },
   { id: 'clubs', symbol: '♣' },
   { id: 'spades', symbol: '♠' },
-  { id: 'stars', symbol: '★' },
-  { id: 'moons', symbol: '☾' },
-  { id: 'triangles', symbol: '▲' },
-  { id: 'shields', symbol: '🛡' },
+  { id: 'hearts2', symbol: '♥' },
+  { id: 'diamonds2', symbol: '♦' },
+  { id: 'clubs2', symbol: '♣' },
+  { id: 'spades2', symbol: '♠' },
 ];
 
 export const RANKS: Rank[] = [

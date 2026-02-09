@@ -1,32 +1,31 @@
 // src/game/deck.ts
-import type { Card } from './types'
+import type { Card, Rank, Suit } from './types'
 import { RANKS, SUITS, TOTAL_JOKERS } from './types';
 
 export function createFullDeck(): Card[] {
-  const cards: Card[] = [];
+  const deck: Card[] = [];
 
   // Normal 8 × 13 = 104 cards
   SUITS.forEach((suit) => {
-    RANKS.forEach((rank) => {
-      const id = `card-${suit}-${rank}`;
-      cards.push({
-        id,
-        suit,
-        rank,
+    RANKS.forEach((rank: Rank) => {
+      deck.push({
+      id : `card-${suit.id}-${rank}-${deck.length}`,
+      rank,
+      suit: suit.id as Suit,
       });
     });
   });
 
   // 4 Jokers
   for (let i = 0; i < TOTAL_JOKERS; i++) {
-    cards.push({
+    deck.push({
       id: `joker-${i}`,
       rank: 'Joker',
       suit: undefined,
     });
   }
 
-  return cards;
+  return deck;
 }
 
 export function shuffleDeck(deck: Card[]): Card[] {
