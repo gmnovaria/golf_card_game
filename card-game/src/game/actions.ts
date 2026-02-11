@@ -2,6 +2,15 @@
 
 import type { GameState, PlayerId } from './types';
 
+function nextPlayerState(state: GameState): Pick<GameState, 'currentPlayerId' | 'turn'> {
+  const nextPlayerId = (state.currentPlayerId + 1) % state.players.length;
+  const nextTurn = nextPlayerId === 0 ? state.turn + 1 : state.turn;
+  return {
+    currentPlayerId: nextPlayerId,
+    turn: nextTurn,
+  };
+}
+
 export function flipGridCard(
   state: GameState,
   playerId: PlayerId,
@@ -70,22 +79,18 @@ export function flipGridCard(
       let updatedDrawPile = newState.drawPile;
       let updatedDiscardPile = newState.discardPile;
 
-    if (updatedDrawPile.length > 0){
-      const [topCard, ...rest] = updatedDrawPile;
-      updatedDrawPile = rest;
-      // put new card at the front of the discard pile
-      const flippedCard = {
-        ...topCard,
-        faceUp: true,
-      };
-
-      updatedDiscardPile = [flippedCard, ...updatedDiscardPile];
-    }
+      if (updatedDrawPile.length > 0) {
+        const [topCard, ...rest] = updatedDrawPile;
+        updatedDrawPile = rest;
+        updatedDiscardPile = [topCard, ...updatedDiscardPile];
+      }
 
       newState = {
         ...newState,
         drawPile: updatedDrawPile,
         discardPile: updatedDiscardPile,
+        activeCard: null,
+        activeCardSource: null,
         phase: 'PLAYING',
         currentPlayerId: 0, // back to Gage
         turn: 1,
@@ -112,4 +117,135 @@ export function flipGridCard(
   }
 
   return newState;
+}
+
+export function chooseTurnCard(
+  state: GameState,
+  playerId: PlayerId,
+  source: 'Draw' | 'Discard',
+): GameState {
+  if (state.phase !== 'PLAYING') {
+    return state;
+  }
+
+  if (state.currentPlayerId !== playerId) {
+    return state;
+  }
+
+  // Current player must resolve the active card before choosing again.
+  if (state.activeCard) {
+    return state;
+  }
+
+  if (source === 'Draw') {
+    const [topDrawCard, ...restDrawPile] = state.drawPile;
+    if (!topDrawCard) {
+      return state;
+    }
+
+    return {
+      ...state,
+      drawPile: restDrawPile,
+      activeCard: topDrawCard,
+      activeCardSource: 'Draw',
+    };
+  }
+
+  const [topDiscardCard, ...restDiscardPile] = state.discardPile;
+  if (!topDiscardCard) {
+    return state;
+  }
+
+  return {
+    ...state,
+    discardPile: restDiscardPile,
+    activeCard: topDiscardCard,
+    activeCardSource: 'Discard',
+  };
+}
+
+export function placeActiveCardInGrid(
+  state: GameState,
+  playerId: PlayerId,
+  row: number,
+  col: number,
+): GameState {
+  if (state.phase !== 'PLAYING') {
+    return state;
+  }
+
+  if (state.currentPlayerId !== playerId) {
+    return state;
+  }
+
+  if (!state.activeCard || !state.activeCardSource) {
+    return state;
+  }
+
+  const playerIndex = state.players.findIndex((p) => p.id === playerId);
+  if (playerIndex === -1) {
+    return state;
+  }
+
+  const player = state.players[playerIndex];
+  const targetSlot = player.grid[row]?.[col];
+  if (!targetSlot) {
+    return state;
+  }
+
+  const replacedCard = targetSlot.card;
+  const updatedSlot = {
+    card: state.activeCard,
+    faceUp: true,
+  };
+
+  const updatedGrid = player.grid.map((gridRow, rowIndex) =>
+    gridRow.map((slot, colIndex) =>
+      rowIndex === row && colIndex === col ? updatedSlot : slot,
+    ),
+  );
+
+  const updatedPlayers = state.players.map((p, idx) =>
+    idx === playerIndex ? { ...p, grid: updatedGrid } : p,
+  );
+
+  const next = nextPlayerState(state);
+
+  return {
+    ...state,
+    players: updatedPlayers,
+    discardPile: [replacedCard, ...state.discardPile],
+    activeCard: null,
+    activeCardSource: null,
+    currentPlayerId: next.currentPlayerId,
+    turn: next.turn,
+  };
+}
+
+export function discardActiveDrawCard(
+  state: GameState,
+  playerId: PlayerId,
+): GameState {
+  if (state.phase !== 'PLAYING') {
+    return state;
+  }
+
+  if (state.currentPlayerId !== playerId) {
+    return state;
+  }
+
+  if (!state.activeCard || state.activeCardSource !== 'Draw') {
+    return state;
+  }
+
+  const next = nextPlayerState(state);
+
+  return {
+    ...state,
+    discardPile: [state.activeCard, ...state.discardPile],
+    activeCard: null,
+    activeCardSource: null,
+    currentPlayerId: next.currentPlayerId,
+    turn: next.turn,
+  };
 }

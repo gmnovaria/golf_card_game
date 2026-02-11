@@ -67,6 +67,8 @@ export interface GameState {
   players: Player[];      // always 4
   drawPile: Card[];       // undealt cards
   discardPile: Card[];    // used cards
+  activeCard: Card | null;
+  activeCardSource: 'Draw' | 'Discard' | null;
   currentPlayerId: PlayerId;
   turn: number;
   phase: Phase;
