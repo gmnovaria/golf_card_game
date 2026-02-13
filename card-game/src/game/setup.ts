@@ -74,6 +74,8 @@ export function createInitialGameState(playerNames?: string[]): GameState {
     discardPile: [],
     activeCard: null,
     activeCardSource: null,
+    finalRoundStarterId: null,
+    finalTurnsRemaining: 0,
     currentPlayerId: 0,
     turn: 1,
     phase: 'SETUP', 

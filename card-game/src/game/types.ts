@@ -69,6 +69,8 @@ export interface GameState {
   discardPile: Card[];    // used cards
   activeCard: Card | null;
   activeCardSource: 'Draw' | 'Discard' | null;
+  finalRoundStarterId: PlayerId | null;
+  finalTurnsRemaining: number;
   currentPlayerId: PlayerId;
   turn: number;
   phase: Phase;

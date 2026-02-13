@@ -1,6 +1,7 @@
 // src/App.tsx
 
 import { useState } from 'react';
+import type { CSSProperties } from 'react';
 import type { Card, GameState, GridSlot, Suit } from './game/types';
 import { SUITS } from './game/types';
 import { createInitialGameState } from './game/setup';
@@ -16,6 +17,7 @@ const SOUTH_INDEX = 0; // Gage
 const WEST_INDEX = 1; // Player 2
 const NORTH_INDEX = 2; // Player 3
 const EAST_INDEX = 3; // Player 4
+const TOTAL_HANDS = 9;
 
 const INITIAL_STATE: GameState = createInitialGameState([
   'Gage',
@@ -125,7 +127,16 @@ function App() {
       return `${current.name}: flip ${remaining} more card${remaining === 1 ? '' : 's'}.`;
     }
 
+    if (game.phase === 'GAME_OVER') {
+      return 'Hand over: all remaining face-down cards have been revealed.';
+    }
+
     if (!game.activeCard) {
+      if (game.finalRoundStarterId !== null && game.finalTurnsRemaining > 0) {
+        const starter = game.players[game.finalRoundStarterId];
+        return `${current.name}: final turn (${game.finalTurnsRemaining} remaining) after ${starter.name} revealed all 9 cards.`;
+      }
+
       return `${current.name}: choose top Draw or top Discard.`;
     }
 
@@ -160,75 +171,113 @@ function App() {
 
       <div
         style={{
-          display: 'grid',
-          gridTemplateRows: 'auto auto',
-          gridTemplateColumns: 'auto auto auto',
-          rowGap: '3rem',
-          columnGap: '3rem',
+          display: 'flex',
+          alignItems: 'flex-start',
           justifyContent: 'center',
-          alignItems: 'center',
+          gap: '6rem',
           marginTop: '1rem',
+          overflowX: 'auto',
         }}
       >
-        <div style={{ gridRow: 1, gridColumn: 2, textAlign: 'center', marginBottom: '1rem' }}>
-          <PlayerPanel
-            playerName={northPlayer.name}
-            grid={northPlayer.grid}
-            rotation={0}
-            isCurrent={northPlayer.id === game.currentPlayerId}
-            onCellClick={getGridClickHandler(northPlayer.id)}
-          />
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateRows: 'auto auto',
+            gridTemplateColumns: '220px auto 220px',
+            rowGap: '3rem',
+            columnGap: '3rem',
+            justifyContent: 'center',
+            alignItems: 'center',
+          }}
+        >
+          <div style={{ gridRow: 1, gridColumn: 2, textAlign: 'center', marginBottom: '1rem' }}>
+            <PlayerPanel
+              playerName={northPlayer.name}
+              grid={northPlayer.grid}
+              rotation={0}
+              isCurrent={northPlayer.id === game.currentPlayerId}
+              onCellClick={getGridClickHandler(northPlayer.id)}
+            />
+          </div>
+
+          <div style={{ gridRow: 1, gridColumn: 1, textAlign: 'center', transform: 'translateY(90px)' }}>
+            <PlayerPanel
+              playerName={westPlayer.name}
+              grid={westPlayer.grid}
+              rotation={0}
+              isCurrent={westPlayer.id === game.currentPlayerId}
+              onCellClick={getGridClickHandler(westPlayer.id)}
+            />
+          </div>
+
+          <div style={{ gridRow: 1, gridColumn: 3, textAlign: 'center', transform: 'translateY(90px)' }}>
+            <PlayerPanel
+              playerName={eastPlayer.name}
+              grid={eastPlayer.grid}
+              rotation={0}
+              isCurrent={eastPlayer.id === game.currentPlayerId}
+              onCellClick={getGridClickHandler(eastPlayer.id)}
+            />
+          </div>
+
+          <div style={{ gridRow: 2, gridColumn: 2, textAlign: 'center' }}>
+            <PlayerPanel
+              playerName={southPlayer.name}
+              grid={southPlayer.grid}
+              rotation={0}
+              isCurrent={southPlayer.id === game.currentPlayerId}
+              onCellClick={getGridClickHandler(southPlayer.id)}
+              size="large"
+            />
+          </div>
+
+          <div
+            style={{
+              gridRow: 2,
+              gridColumn: 1,
+              textAlign: 'center',
+              transform: 'translateY(20px)',
+              justifySelf: 'center',
+              width: '220px',
+            }}
+          >
+            <InHandPanel
+              activeCard={game.activeCard}
+              activeCardSource={game.activeCardSource}
+            />
+          </div>
+
+          <div
+            style={{
+              gridRow: 2,
+              gridColumn: 3,
+              textAlign: 'center',
+              transform: 'translateY(20px)',
+              justifySelf: 'center',
+              width: '220px',
+            }}
+          >
+            <CenterPiles
+              drawCount={game.drawPile.length}
+              discardCount={game.discardPile.length}
+              topDiscardCard={game.discardPile[0] ?? null}
+              onDrawClick={handleDrawPileClick}
+              onDiscardClick={handleDiscardPileClick}
+              canChooseDraw={game.phase === 'PLAYING' && !game.activeCard && game.drawPile.length > 0}
+              canChooseDiscard={game.phase === 'PLAYING' && !game.activeCard && game.discardPile.length > 0}
+              canDiscardActiveDraw={
+                game.phase === 'PLAYING' &&
+                !!game.activeCard &&
+                game.activeCardSource === 'Draw'
+              }
+            />
+          </div>
         </div>
 
-        <div style={{ gridRow: 1, gridColumn: 1, textAlign: 'center', transform: 'translateY(90px)' }}>
-          <PlayerPanel
-            playerName={westPlayer.name}
-            grid={westPlayer.grid}
-            rotation={0}
-            isCurrent={westPlayer.id === game.currentPlayerId}
-            onCellClick={getGridClickHandler(westPlayer.id)}
-          />
-        </div>
-
-        <div style={{ gridRow: 1, gridColumn: 3, textAlign: 'center', transform: 'translateY(90px)' }}>
-          <PlayerPanel
-            playerName={eastPlayer.name}
-            grid={eastPlayer.grid}
-            rotation={0}
-            isCurrent={eastPlayer.id === game.currentPlayerId}
-            onCellClick={getGridClickHandler(eastPlayer.id)}
-          />
-        </div>
-
-        <div style={{ gridRow: 2, gridColumn: 2, textAlign: 'center' }}>
-          <PlayerPanel
-            playerName={southPlayer.name}
-            grid={southPlayer.grid}
-            rotation={0}
-            isCurrent={southPlayer.id === game.currentPlayerId}
-            onCellClick={getGridClickHandler(southPlayer.id)}
-            size="large"
-          />
-        </div>
-
-        <div style={{ gridRow: 2, gridColumn: 3, textAlign: 'center', transform: 'translateY(20px)' }}>
-          <CenterPiles
-            drawCount={game.drawPile.length}
-            discardCount={game.discardPile.length}
-            topDiscardCard={game.discardPile[0] ?? null}
-            activeCard={game.activeCard}
-            activeCardSource={game.activeCardSource}
-            onDrawClick={handleDrawPileClick}
-            onDiscardClick={handleDiscardPileClick}
-            canChooseDraw={game.phase === 'PLAYING' && !game.activeCard && game.drawPile.length > 0}
-            canChooseDiscard={game.phase === 'PLAYING' && !game.activeCard && game.discardPile.length > 0}
-            canDiscardActiveDraw={
-              game.phase === 'PLAYING' &&
-              !!game.activeCard &&
-              game.activeCardSource === 'Draw'
-            }
-          />
-        </div>
+        <Scoreboard
+          playerNames={game.players.map((player) => player.name)}
+          totalHands={TOTAL_HANDS}
+        />
       </div>
     </div>
   );
@@ -262,10 +311,11 @@ function PlayerPanel({
     >
       <div
         style={{
-          border: isCurrent ? '2px solid #f6e05e' : '1px solid #4a5568',
+          border: isCurrent ? '2px solid #4f6a3f' : '1px solid #4f6a3f',
           borderRadius: '8px',
           padding: '0.75rem 1rem',
-          backgroundColor: '#2d3748',
+          backgroundColor: isCurrent ? '#d7e2cf' : '#c5d4ba',
+          color: '#24361f',
         }}
       >
         <div style={{ marginBottom: '0.5rem', fontWeight: 600 }}>
@@ -381,8 +431,6 @@ interface CenterPilesProps {
   drawCount: number;
   discardCount: number;
   topDiscardCard: Card | null;
-  activeCard: Card | null;
-  activeCardSource: 'Draw' | 'Discard' | null;
   onDrawClick: () => void;
   onDiscardClick: () => void;
   canChooseDraw: boolean;
@@ -394,8 +442,6 @@ function CenterPiles({
   drawCount,
   discardCount,
   topDiscardCard,
-  activeCard,
-  activeCardSource,
   onDrawClick,
   onDiscardClick,
   canChooseDraw,
@@ -488,24 +534,121 @@ function CenterPiles({
           </div>
         </div>
 
-        {activeCard && (
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ marginBottom: '0.25rem', fontSize: '0.9rem' }}>
-              In Hand ({activeCardSource})
-            </div>
-            <FaceCard
-              card={activeCard}
-              width={cardWidth}
-              height={cardHeight}
-              centerFontSize="2.7rem"
-              cornerFontSize="1.5rem"
-            />
-          </div>
-        )}
       </div>
     </div>
   );
 }
+
+interface InHandPanelProps {
+  activeCard: Card | null;
+  activeCardSource: 'Draw' | 'Discard' | null;
+}
+
+function InHandPanel({ activeCard, activeCardSource }: InHandPanelProps) {
+  if (!activeCard) {
+    return null;
+  }
+
+  const cardWidth = 80;
+  const cardHeight = 120;
+
+  return (
+    <div style={{ textAlign: 'center' }}>
+      <div style={{ marginBottom: '0.25rem', fontSize: '0.9rem' }}>
+        In Hand ({activeCardSource})
+      </div>
+      <div style={{ display: 'flex', justifyContent: 'center' }}>
+        <FaceCard
+          card={activeCard}
+          width={cardWidth}
+          height={cardHeight}
+          centerFontSize="2.7rem"
+          cornerFontSize="1.5rem"
+        />
+      </div>
+    </div>
+  );
+}
+
+interface ScoreboardProps {
+  playerNames: string[];
+  totalHands: number;
+}
+
+function Scoreboard({ playerNames, totalHands }: ScoreboardProps) {
+  const handHeaders = Array.from({ length: totalHands }, (_, index) => index + 1);
+
+  return (
+    <div
+      style={{
+        border: '1px solid #4f6a3f',
+        borderRadius: 8,
+        backgroundColor: '#d8e3cf',
+        padding: '0.75rem',
+        minWidth: 620,
+        marginLeft: '1rem',
+        alignSelf: 'center',
+      }}
+    >
+      <div style={{ fontWeight: 700, marginBottom: '0.5rem', color: '#2f421f', textAlign: 'center'}}>Scoreboard</div>
+      <table style={{ borderCollapse: 'collapse', width: '100%' }}>
+        <thead>
+          <tr>
+            <th style={scoreHeaderCellStyle}>Player</th>
+            {handHeaders.map((handNumber) => (
+              <th key={handNumber} style={scoreHeaderCellStyle}>
+                {handNumber}
+              </th>
+            ))}
+            <th style={scoreHeaderCellStyle}>Sum</th>
+          </tr>
+        </thead>
+        <tbody>
+          {playerNames.map((playerName) => (
+            <tr key={playerName}>
+              <td style={scorePlayerCellStyle}>{playerName}</td>
+              {handHeaders.map((handNumber) => (
+                <td key={`${playerName}-${handNumber}`} style={scoreValueCellStyle}>
+                  -
+                </td>
+              ))}
+              <td style={scoreValueCellStyle}>0</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+const scoreHeaderCellStyle: CSSProperties = {
+  border: '1px solid #4f6a3f',
+  padding: '0.35rem 0.5rem',
+  textAlign: 'center',
+  fontSize: '0.85rem',
+  fontWeight: 700,
+  color: '#f2f6ec',
+  backgroundColor: '#5b743f',
+};
+
+const scorePlayerCellStyle: CSSProperties = {
+  border: '1px solid #4f6a3f',
+  padding: '0.35rem 0.5rem',
+  textAlign: 'left',
+  fontWeight: 600,
+  color: '#24361f',
+  backgroundColor: '#c7d8b9',
+  minWidth: 110,
+};
+
+const scoreValueCellStyle: CSSProperties = {
+  border: '1px solid #4f6a3f',
+  padding: '0.35rem 0.5rem',
+  textAlign: 'center',
+  color: '#24361f',
+  backgroundColor: '#deead3',
+  minWidth: 36,
+};
 
 interface FaceCardProps {
   card: Card;

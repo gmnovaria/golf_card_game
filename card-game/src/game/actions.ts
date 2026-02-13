@@ -11,6 +11,83 @@ function nextPlayerState(state: GameState): Pick<GameState, 'currentPlayerId' | 
   };
 }
 
+function isPlayerFullyFaceUp(state: GameState, playerId: PlayerId): boolean {
+  const player = state.players.find((p) => p.id === playerId);
+  if (!player) {
+    return false;
+  }
+
+  return player.grid.every((row) =>
+    row.every((slot) => !!slot && slot.faceUp),
+  );
+}
+
+function revealAllCards(state: GameState): GameState {
+  const revealedPlayers = state.players.map((player) => ({
+    ...player,
+    grid: player.grid.map((row) =>
+      row.map((slot) => (slot ? { ...slot, faceUp: true } : slot)),
+    ),
+  }));
+
+  return {
+    ...state,
+    players: revealedPlayers,
+  };
+}
+
+function resolveEndOfTurn(state: GameState, completedPlayerId: PlayerId): GameState {
+  const next = nextPlayerState(state);
+
+  if (state.finalRoundStarterId !== null && state.finalTurnsRemaining > 0) {
+    const updatedFinalTurnsRemaining = state.finalTurnsRemaining - 1;
+
+    if (updatedFinalTurnsRemaining <= 0) {
+      return {
+        ...revealAllCards(state),
+        phase: 'GAME_OVER',
+        finalTurnsRemaining: 0,
+        currentPlayerId: next.currentPlayerId,
+        turn: next.turn,
+      };
+    }
+
+    return {
+      ...state,
+      finalTurnsRemaining: updatedFinalTurnsRemaining,
+      currentPlayerId: next.currentPlayerId,
+      turn: next.turn,
+    };
+  }
+
+  if (isPlayerFullyFaceUp(state, completedPlayerId)) {
+    const turnsForOtherPlayers = state.players.length - 1;
+
+    if (turnsForOtherPlayers <= 0) {
+      return {
+        ...revealAllCards(state),
+        phase: 'GAME_OVER',
+        finalRoundStarterId: completedPlayerId,
+        finalTurnsRemaining: 0,
+      };
+    }
+
+    return {
+      ...state,
+      finalRoundStarterId: completedPlayerId,
+      finalTurnsRemaining: turnsForOtherPlayers,
+      currentPlayerId: next.currentPlayerId,
+      turn: next.turn,
+    };
+  }
+
+  return {
+    ...state,
+    currentPlayerId: next.currentPlayerId,
+    turn: next.turn,
+  };
+}
+
 export function flipGridCard(
   state: GameState,
   playerId: PlayerId,
@@ -209,17 +286,15 @@ export function placeActiveCardInGrid(
     idx === playerIndex ? { ...p, grid: updatedGrid } : p,
   );
 
-  const next = nextPlayerState(state);
-
-  return {
+  const updatedState: GameState = {
     ...state,
     players: updatedPlayers,
     discardPile: [replacedCard, ...state.discardPile],
     activeCard: null,
     activeCardSource: null,
-    currentPlayerId: next.currentPlayerId,
-    turn: next.turn,
   };
+
+  return resolveEndOfTurn(updatedState, playerId);
 }
 
 export function discardActiveDrawCard(
@@ -238,14 +313,12 @@ export function discardActiveDrawCard(
     return state;
   }
 
-  const next = nextPlayerState(state);
-
-  return {
+  const updatedState: GameState = {
     ...state,
     discardPile: [state.activeCard, ...state.discardPile],
     activeCard: null,
     activeCardSource: null,
-    currentPlayerId: next.currentPlayerId,
-    turn: next.turn,
   };
+
+  return resolveEndOfTurn(updatedState, playerId);
 }
