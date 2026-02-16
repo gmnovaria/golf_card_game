@@ -292,7 +292,11 @@ function App() {
               topDiscardCard={game.discardPile[0] ?? null}
               onDrawClick={handleDrawPileClick}
               onDiscardClick={handleDiscardPileClick}
-              canChooseDraw={game.phase === 'PLAYING' && !game.activeCard && game.drawPile.length > 0}
+              canChooseDraw={
+                game.phase === 'PLAYING' &&
+                !game.activeCard &&
+                (game.drawPile.length > 0 || game.discardPile.length > 0)
+              }
               canChooseDiscard={game.phase === 'PLAYING' && !game.activeCard && game.discardPile.length > 0}
               canDiscardActiveDraw={
                 game.phase === 'PLAYING' &&
@@ -483,6 +487,7 @@ function CenterPiles({
   const cardHeight = 120;
 
   const discardClickable = canChooseDiscard || canDiscardActiveDraw;
+  const drawPileHasCards = drawCount > 0;
 
   return (
     <div style={{ textAlign: 'center' }}>
@@ -501,7 +506,13 @@ function CenterPiles({
               width: cardWidth,
               height: cardHeight,
               borderRadius: 6,
-              border: canChooseDraw ? '2px solid #f6e05e' : '2px solid #044718',
+              border: drawPileHasCards
+                ? canChooseDraw
+                  ? '2px solid #f6e05e'
+                  : '2px solid #044718'
+                : canChooseDraw
+                  ? '2px solid #f6e05e'
+                  : '2px dashed #e2e8f0',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -509,21 +520,36 @@ function CenterPiles({
               cursor: canChooseDraw ? 'pointer' : 'default',
               userSelect: 'none',
               opacity: canChooseDraw ? 1 : 0.8,
-              ...cardBackPatternStyle,
+              ...(drawPileHasCards ? cardBackPatternStyle : { backgroundColor: 'transparent' }),
             }}
           >
-            <span
-              style={{
-                fontSize: '2.5rem',
-                fontWeight: 600,
-                letterSpacing: '0.05em',
-                lineHeight: 1,
-                display: 'inline-block',
-                transform: 'translate(2px, -3px)',
-              }}
-            >
-              ⛳
-            </span>
+            {drawPileHasCards ? (
+              <span
+                style={{
+                  fontSize: '2.5rem',
+                  fontWeight: 600,
+                  letterSpacing: '0.05em',
+                  lineHeight: 1,
+                  display: 'inline-block',
+                  transform: 'translate(2px, -3px)',
+                }}
+              >
+                ⛳
+              </span>
+            ) : (
+              <div
+                style={{
+                  textAlign: 'center',
+                  color: '#e2e8f0',
+                  fontWeight: 700,
+                  lineHeight: 1.2,
+                  padding: '0 0.4rem',
+                }}
+              >
+                <div style={{ fontSize: '0.68rem' }}>RECYCLE</div>
+                <div style={{ fontSize: '0.68rem' }}>DISCARD PILE</div>
+              </div>
+            )}
           </div>
           <div style={{ fontSize: '0.9rem' }}>
             Cards: <strong>{drawCount}</strong>
@@ -569,7 +595,6 @@ function CenterPiles({
     </div>
   );
 }
-
 interface InHandPanelProps {
   activeCard: Card | null;
   activeCardSource: 'Draw' | 'Discard' | null;
@@ -787,3 +812,4 @@ function FaceCard({
 }
 
 export default App;
+
