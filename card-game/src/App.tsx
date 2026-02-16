@@ -10,6 +10,7 @@ import {
   discardActiveDrawCard,
   flipGridCard,
   placeActiveCardInGrid,
+  startNextHand,
 } from './game/actions';
 
 // Seating positions (indices into game.players)
@@ -103,6 +104,10 @@ function App() {
     });
   }
 
+  function handleNextHandClick() {
+    setGame((prev) => startNextHand(prev, TOTAL_HANDS));
+  }
+
   function getGridClickHandler(playerId: number) {
     if (game.phase === 'SETUP') {
       return (row: number, col: number) => handleGridClick(playerId, row, col);
@@ -128,7 +133,13 @@ function App() {
     }
 
     if (game.phase === 'GAME_OVER') {
-      return 'Hand over: all remaining face-down cards have been revealed.';
+      const winnerName =
+        game.winnerId !== null ? game.players[game.winnerId]?.name ?? 'Unknown' : 'Unknown';
+      if (game.currentHand >= TOTAL_HANDS) {
+        return `Hand ${game.currentHand} over: all cards revealed and scored. Match complete. Last hand winner: ${winnerName}.`;
+      }
+
+      return `Hand ${game.currentHand} over: all cards revealed and scored. Lowest score: ${winnerName}.`;
     }
 
     if (!game.activeCard) {
@@ -165,9 +176,27 @@ function App() {
     >
       <h1 style={{ marginBottom: '0.5rem' }}>Card Game Prototype</h1>
       <p style={{ marginBottom: '0.4rem' }}>
+        Hand: {game.currentHand} / {TOTAL_HANDS} |{' '}
         Turn: {game.turn} - Current Player: <strong>{game.players[game.currentPlayerId].name}</strong>
       </p>
       <p style={{ marginBottom: '1.5rem' }}>{getStatusText()}</p>
+      {game.phase === 'GAME_OVER' && game.currentHand < TOTAL_HANDS && (
+        <button
+          onClick={handleNextHandClick}
+          style={{
+            marginBottom: '1.25rem',
+            padding: '0.55rem 1rem',
+            borderRadius: 6,
+            border: '1px solid #e6eddb',
+            backgroundColor: '#dbe8cd',
+            color: '#1f3118',
+            fontWeight: 700,
+            cursor: 'pointer',
+          }}
+        >
+          Start Hand {game.currentHand + 1}
+        </button>
+      )}
 
       <div
         style={{
@@ -275,8 +304,10 @@ function App() {
         </div>
 
         <Scoreboard
+          playerIds={game.players.map((player) => player.id)}
           playerNames={game.players.map((player) => player.name)}
           totalHands={TOTAL_HANDS}
+          scoreHistory={game.scoreHistory}
         />
       </div>
     </div>
@@ -571,11 +602,13 @@ function InHandPanel({ activeCard, activeCardSource }: InHandPanelProps) {
 }
 
 interface ScoreboardProps {
+  playerIds: number[];
   playerNames: string[];
   totalHands: number;
+  scoreHistory: Record<number, number[]>;
 }
 
-function Scoreboard({ playerNames, totalHands }: ScoreboardProps) {
+function Scoreboard({ playerIds, playerNames, totalHands, scoreHistory }: ScoreboardProps) {
   const handHeaders = Array.from({ length: totalHands }, (_, index) => index + 1);
 
   return (
@@ -604,17 +637,23 @@ function Scoreboard({ playerNames, totalHands }: ScoreboardProps) {
           </tr>
         </thead>
         <tbody>
-          {playerNames.map((playerName) => (
+          {playerNames.map((playerName, playerIndex) => {
+            const playerId = playerIds[playerIndex];
+            const playerHandScores = scoreHistory[playerId] ?? [];
+            const playerSum = playerHandScores.reduce((sum, score) => sum + score, 0);
+
+            return (
             <tr key={playerName}>
               <td style={scorePlayerCellStyle}>{playerName}</td>
               {handHeaders.map((handNumber) => (
                 <td key={`${playerName}-${handNumber}`} style={scoreValueCellStyle}>
-                  -
+                  {playerHandScores[handNumber - 1] ?? '-'}
                 </td>
               ))}
-              <td style={scoreValueCellStyle}>0</td>
+              <td style={scoreValueCellStyle}>{playerSum}</td>
             </tr>
-          ))}
+            );
+          })}
         </tbody>
       </table>
     </div>

@@ -1,6 +1,6 @@
 // src/game/setup.ts
 
-import type { GameState, Player, PlayerGrid, GridSlot } from './types';
+import type { GameState, Player, PlayerGrid, GridSlot, PlayerId } from './types';
 import {
   NUM_PLAYERS,
   GRID_SIZE,
@@ -74,6 +74,14 @@ export function createInitialGameState(playerNames?: string[]): GameState {
     discardPile: [],
     activeCard: null,
     activeCardSource: null,
+    currentHand: 1,
+    scoreHistory: players.reduce(
+      (acc, player) => {
+        acc[player.id] = [];
+        return acc;
+      },
+      {} as Record<PlayerId, number[]>,
+    ),
     finalRoundStarterId: null,
     finalTurnsRemaining: 0,
     currentPlayerId: 0,

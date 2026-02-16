@@ -1,6 +1,9 @@
 // src/game/actions.ts
 
-import type { GameState, PlayerId } from './types';
+import type { Card, GameState, GridSlot, PlayerGrid, PlayerId } from './types';
+import { GRID_SIZE } from './types';
+import { shuffleDeck } from './deck';
+import { findLowestScorePlayerId, scoreStatePlayers } from './score';
 
 function nextPlayerState(state: GameState): Pick<GameState, 'currentPlayerId' | 'turn'> {
   const nextPlayerId = (state.currentPlayerId + 1) % state.players.length;
@@ -36,6 +39,66 @@ function revealAllCards(state: GameState): GameState {
   };
 }
 
+function createEmptyGrid(): PlayerGrid {
+  return Array.from({ length: GRID_SIZE }, () =>
+    Array.from({ length: GRID_SIZE }, () => null),
+  );
+}
+
+function dealGridFromDeck(deck: Card[]): { grid: PlayerGrid; remainingDeck: Card[] } {
+  const grid = createEmptyGrid();
+  const remainingDeck = [...deck];
+
+  for (let row = 0; row < GRID_SIZE; row++) {
+    for (let col = 0; col < GRID_SIZE; col++) {
+      const card = remainingDeck.shift();
+      if (!card) {
+        throw new Error('Not enough cards in deck to deal a full grid.');
+      }
+
+      const slot: GridSlot = {
+        card,
+        faceUp: false,
+      };
+      grid[row][col] = slot;
+    }
+  }
+
+  return { grid, remainingDeck };
+}
+
+function collectAllCards(state: GameState): Card[] {
+  const gridCards = state.players.flatMap((player) =>
+    player.grid.flatMap((row) => row.flatMap((slot) => (slot ? [slot.card] : []))),
+  );
+
+  return [
+    ...gridCards,
+    ...state.drawPile,
+    ...state.discardPile,
+    ...(state.activeCard ? [state.activeCard] : []),
+  ];
+}
+
+function finalizeGameOverState(state: GameState): GameState {
+  const revealedState = revealAllCards(state);
+  const scores = scoreStatePlayers(revealedState);
+  const winnerId = findLowestScorePlayerId(scores);
+  const updatedScoreHistory = { ...revealedState.scoreHistory };
+
+  for (const player of revealedState.players) {
+    const playerHistory = updatedScoreHistory[player.id] ?? [];
+    updatedScoreHistory[player.id] = [...playerHistory, scores[player.id]];
+  }
+
+  return {
+    ...revealedState,
+    phase: 'GAME_OVER',
+    winnerId,
+    scoreHistory: updatedScoreHistory,
+  };
+}
+
 function resolveEndOfTurn(state: GameState, completedPlayerId: PlayerId): GameState {
   const next = nextPlayerState(state);
 
@@ -44,8 +107,7 @@ function resolveEndOfTurn(state: GameState, completedPlayerId: PlayerId): GameSt
 
     if (updatedFinalTurnsRemaining <= 0) {
       return {
-        ...revealAllCards(state),
-        phase: 'GAME_OVER',
+        ...finalizeGameOverState(state),
         finalTurnsRemaining: 0,
         currentPlayerId: next.currentPlayerId,
         turn: next.turn,
@@ -65,8 +127,7 @@ function resolveEndOfTurn(state: GameState, completedPlayerId: PlayerId): GameSt
 
     if (turnsForOtherPlayers <= 0) {
       return {
-        ...revealAllCards(state),
-        phase: 'GAME_OVER',
+        ...finalizeGameOverState(state),
         finalRoundStarterId: completedPlayerId,
         finalTurnsRemaining: 0,
       };
@@ -215,13 +276,26 @@ export function chooseTurnCard(
   }
 
   if (source === 'Draw') {
-    const [topDrawCard, ...restDrawPile] = state.drawPile;
+    let updatedDrawPile = state.drawPile;
+    let updatedDiscardPile = state.discardPile;
+
+    if (updatedDrawPile.length === 0) {
+      if (updatedDiscardPile.length === 0) {
+        return state;
+      }
+
+      updatedDrawPile = shuffleDeck(updatedDiscardPile);
+      updatedDiscardPile = [];
+    }
+
+    const [topDrawCard, ...restDrawPile] = updatedDrawPile;
     if (!topDrawCard) {
       return state;
     }
 
     return {
       ...state,
+      discardPile: updatedDiscardPile,
       drawPile: restDrawPile,
       activeCard: topDrawCard,
       activeCardSource: 'Draw',
@@ -321,4 +395,42 @@ export function discardActiveDrawCard(
   };
 
   return resolveEndOfTurn(updatedState, playerId);
+}
+
+export function startNextHand(state: GameState, totalHands: number): GameState {
+  if (state.phase !== 'GAME_OVER') {
+    return state;
+  }
+
+  if (state.currentHand >= totalHands) {
+    return state;
+  }
+
+  let deck = shuffleDeck(collectAllCards(state));
+  const redealtPlayers = state.players.map((player) => {
+    const { grid, remainingDeck } = dealGridFromDeck(deck);
+    deck = remainingDeck;
+
+    return {
+      ...player,
+      grid,
+      initialFlipsRemaining: 3,
+    };
+  });
+
+  return {
+    ...state,
+    players: redealtPlayers,
+    drawPile: deck,
+    discardPile: [],
+    activeCard: null,
+    activeCardSource: null,
+    currentHand: state.currentHand + 1,
+    finalRoundStarterId: null,
+    finalTurnsRemaining: 0,
+    currentPlayerId: 0,
+    turn: 1,
+    phase: 'SETUP',
+    winnerId: null,
+  };
 }
